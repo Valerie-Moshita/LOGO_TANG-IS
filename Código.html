@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>MIS ACTIVIDADES</title>
+  <style>
+    html {
+  zoom: 1.5;
+}
+    body {
+      font-family: "Comic Sans MS", Comic Sans MS, sans-serif;
+      background-color: #f0f7ff;
+      margin: 0;
+      padding: 20px;
+    }
+    
+    .header-container {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .logo {
+      max-width: 100%;
+      width: 800px;
+      height: auto;
+      margin-bottom: 10px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    h1 {
+      text-align: center;
+      color: #0077cc;
+      margin: 10px 0;
+    }
+    .pregunta {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      margin: 20px auto;
+      padding: 15px;
+      max-width: 700px;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 15px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover { background-color: #0056b3; }
+
+    .drag-item {
+      display: inline-block;
+      background-color: #d8ecff;
+      border: 1px solid #007bff;
+      border-radius: 8px;
+      padding: 6px 10px;
+      margin: 5px;
+      cursor: grab;
+      user-select: none;
+    }
+
+    .drop-zone {
+      display: inline-block;
+      background-color: #f8f9fa;
+      border: 2px dashed #bbb;
+      border-radius: 8px;
+      min-width: 100px;
+      min-height: 30px;
+      padding: 8px;
+      margin: 5px;
+      vertical-align: top;
+      box-sizing: border-box;
+      min-height: 44px;
+    }
+
+    .zona-completa {
+      width: 100%;
+      box-sizing: border-box;
+      margin-left: 0;
+      margin-right: 0;
+    }
+
+    .sopa-container {
+      display: inline-block;
+      margin: 10px auto;
+      user-select: none;
+    }
+
+    .sopa-grid {
+      display: grid;
+      gap: 2px;
+      margin-bottom: 10px;
+    }
+
+    .sopa-cell {
+      width: 30px;
+      height: 30px;
+      border: 1px solid #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+      background-color: white;
+      transition: background-color 0.2s;
+    }
+
+    .sopa-cell.selected {
+      background-color: #90EE90 !important;
+      border-color: #32CD32;
+    }
+
+    .sopa-cell.selecting {
+      background-color: #FFEB3B;
+    }
+
+    .palabras-encontradas {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .palabra-badge {
+      padding: 5px 10px;
+      border-radius: 15px;
+      background-color: #e0e0e0;
+      font-size: 12px;
+    }
+
+    .palabra-badge.encontrada {
+      background-color: #90EE90;
+      text-decoration: line-through;
+    }
+
+    .sobre { outline: 3px dashed rgba(0,123,255,0.35); }
+
+    #resultado { text-align: center; font-size: 22px; font-weight: bold; margin-top: 25px; color: #0077cc; }
+    #finalTag { text-align: center; font-size: 14px; color: #555; margin-top: 40px; font-style: italic; }
+    #debugInfo { background: #ffe6e6; padding: 15px; margin: 20px auto; max-width: 700px; border-radius: 8px; font-family: monospace; }
+  </style>
+</head>
+<body>
+
+<div class="header-container">
+  <img src="https://github.com/Valerie-Moshita/LOGO_TANG-IS/blob/main/logo.png?raw=true" alt="Logo Colegio Fermín Tangüis" class="logo" id="logoImg">
+  <h1 id="tituloEvaluacion">ACTIVIDADES</h1>
+</div>
+
+<div id="contenedorDatos" style="text-align:center; margin-bottom:15px;">
+  <input id="nombre" placeholder="Nombre del alumno" style="padding:6px; border-radius:6px; width:250px;">
+  <input id="grado" placeholder="Grado" style="padding:6px; border-radius:6px; width:80px;">
+  <input id="seccion" placeholder="Sección" style="padding:6px; border-radius:6px; width:80px;">
+</div>
+
+<div id="contenedorPreguntas">Cargando preguntas...</div>
+
+<br>
+<div style="text-align:center;">
+  <button onclick="calificar()">Calificar</button>
+</div>
+
+<div id="debugInfo" style="display:none;"></div>
+<p id="resultado"></p>
+
+<script>
+// URL del Apps Script
+const scriptURL = 'https://script.google.com/macros/s/AKfycbx9BAVK1OBGoUuBQb7OcwEl6CNF81evbCSMRznwLoa8VPEw1Jp1xHz4_iAZBbIdpOQmaw/exec';
+
+let preguntas = [];
+let itemCounter = 0;
+let draggedElement = null;
+let respuestasConfirmadas = new Set(); // Para rastrear preguntas ya respondidas
+
+fetch(scriptURL + "?nocache=" + new Date().getTime())
+  .then(res => res.json())
+  .then(data => {
+    preguntas = data;
+    
+    // Actualizar el encabezado si existe en los datos
+    if (preguntas.length > 0 && preguntas[0].ENCABEZADO) {
+      document.getElementById("tituloEvaluacion").textContent = preguntas[0].ENCABEZADO;
+    }
+    
+    mostrarPreguntas();
+  })
+  .catch(e => {
+    document.getElementById("contenedorPreguntas").innerHTML =
+      "<p style='color:red;'>Error al cargar preguntas.<br>Verifica que la web esté publicada correctamente.</p>";
+    console.error(e);
+  });
+
+function crearDragItemHTML(texto, grupo) {
+  const id = 'item_' + (itemCounter++);
+  return `<div class='drag-item' draggable='true' data-group='${grupo}' data-value='${texto}' data-id='${id}'>${texto}</div>`;
+}
+
+function mostrarPreguntas() {
+  const cont = document.getElementById("contenedorPreguntas");
+  cont.innerHTML = "";
+  preguntas.forEach((p, i) => {
+    
+    let html = `<div class='pregunta'><b>${i + 1})</b>&nbsp;&nbsp;${p.Pregunta}<br>`;
+    switch (p.Tipo) {
+      case "opcion":
+        html += p.Respuestas.split(",").map(r =>
+          `<label><input type='radio' name='p${i}' value='${r.trim()}' onchange='bloquearRespuesta(${i}, "opcion")'> ${r.trim()}</label><br>`
+        ).join("");
+        break;
+
+      case "verdadero_falso":
+        html += `
+          <label><input type='radio' name='p${i}' value='Verdadero' onchange='bloquearRespuesta(${i}, "verdadero_falso")'> Verdadero</label><br>
+          <label><input type='radio' name='p${i}' value='Falso' onchange='bloquearRespuesta(${i}, "verdadero_falso")'> Falso</label>
+        `;
+        break;
+
+      case "numerica":
+        html += `<input type='number' id='p${i}' onchange='bloquearRespuesta(${i}, "numerica")' style='width:80px;'>`;
+        break;
+
+      case "emparejar": {
+        const pares = p.Respuestas.split(",").map(x => x.trim().split(":"));
+        
+        // Desordenar las palabras arrastrables
+        const paresDesordenados = [...pares].sort(() => Math.random() - 0.5);
+
+        html += `<div id='zonaBase${i}' class='zona-completa drop-zone' data-group='${i}' style='border:2px solid #ccc; border-radius:10px; padding:5px; display:flex; flex-wrap:wrap; gap:5px;'>`;
+        html += paresDesordenados.map(pair => crearDragItemHTML(pair[0], i)).join("");
+        html += `</div>`;
+
+        html += `<div class='zona-completa' style='display:flex; flex-wrap:wrap; justify-content:center;'>`;
+        pares.forEach(pair => {
+          html += `
+            <div class='drop-zone' data-correct='${pair[0]}' data-group='${i}' style='min-width:120px; margin:5px;'>
+              <b>${pair[1]}</b>
+            </div>`;
+        });
+        html += `</div>`;
+      }
+      break;
+
+      case "formar_oracion": {
+        const palabras = p.Respuestas.split(",").map(x => x.trim()).sort(() => Math.random() - 0.5);
+
+        html += `
+          <div id='zonaFormar${i}' class='drop-zone zona-completa' data-group='${i}' style='min-height:40px; border:2px dashed #bbb; margin-bottom:10px; padding:8px;'></div>
+        `;
+
+        html += `
+          <div id='zonaPalabras${i}' class='zona-completa drop-zone' data-group='${i}' style='border:2px solid #ccc; padding:5px; display:flex; flex-wrap:wrap; gap:5px;'>
+            ${palabras.map(w => crearDragItemHTML(w, i)).join("")}
+          </div>
+        `;
+      }
+      break;
+
+      case "sopa_letras": {
+        const palabras = p.Respuestas.split(",").map(x => x.trim().toUpperCase());
+        const tamaño = 12;
+        const grid = crearSopaDeLetras(palabras, tamaño);
+        
+        html += `
+          <div class='sopa-container' style='text-align:center;'>
+            <div class='sopa-grid' id='sopaGrid${i}' style='grid-template-columns: repeat(${tamaño}, 30px);' data-index='${i}'>
+              ${grid.map((fila, f) => 
+                fila.map((letra, c) => 
+                  `<div class='sopa-cell' data-fila='${f}' data-col='${c}'>${letra}</div>`
+                ).join('')
+              ).join('')}
+            </div>
+            <div class='palabras-encontradas' id='palabrasEncontradas${i}'>
+              ${palabras.map(p => `<span class='palabra-badge' data-palabra='${p}'>${p}</span>`).join('')}
+            </div>
+          </div>
+        `;
+      }
+      break;
+
+      default:
+        html += `<i>Tipo no reconocido.</i>`;
+    }
+
+    html += "</div>";
+    cont.innerHTML += html;
+  });
+
+  activarDragDrop();
+  activarSopaDeLetras();
+}
+
+// Bloquear respuesta después de seleccionarla
+function bloquearRespuesta(indice, tipo) {
+  // Evitar bloquear múltiples veces
+  if (respuestasConfirmadas.has(indice)) return;
+  
+  // Pequeño delay para que se registre la selección
+  setTimeout(() => {
+    respuestasConfirmadas.add(indice);
+    
+    switch(tipo) {
+      case "opcion":
+      case "verdadero_falso":
+        // Deshabilitar todos los radios de esa pregunta
+        const radios = document.querySelectorAll(`input[name='p${indice}']`);
+        radios.forEach(radio => {
+          radio.disabled = true;
+          if (radio.checked) {
+            radio.parentElement.style.fontWeight = 'bold';
+            radio.parentElement.style.color = '#0077cc';
+          }
+        });
+        break;
+        
+      case "numerica":
+        // Deshabilitar el input numérico
+        const input = document.getElementById(`p${indice}`);
+        if (input && input.value.trim() !== '') {
+          input.disabled = true;
+          input.style.backgroundColor = '#e9ecef';
+          input.style.fontWeight = 'bold';
+          input.style.color = '#0077cc';
+        }
+        break;
+    }
+  }, 100);
+}
+
+function activarDragDrop() {
+  document.addEventListener('dragstart', function(e) {
+    if (e.target.classList.contains('drag-item')) {
+      draggedElement = e.target;
+      e.dataTransfer.effectAllowed = 'move';
+      e.target.style.opacity = '0.5';
+    }
+  });
+
+  document.addEventListener('dragend', function(e) {
+    if (e.target.classList.contains('drag-item')) {
+      e.target.style.opacity = '1';
+    }
+  });
+
+  document.addEventListener('dragover', function(e) {
+    if (!e.target.classList.contains('drop-zone')) return;
+    if (!draggedElement) return;
+    
+    const zonaGroup = e.target.getAttribute('data-group');
+    const itemGroup = draggedElement.getAttribute('data-group');
+    
+    if (zonaGroup === itemGroup) {
+      e.preventDefault();
+      e.target.classList.add('sobre');
+    }
+  });
+
+  document.addEventListener('dragleave', function(e) {
+    if (e.target.classList.contains('drop-zone')) {
+      e.target.classList.remove('sobre');
+    }
+  });
+
+  document.addEventListener('drop', function(e) {
+    if (!e.target.classList.contains('drop-zone')) return;
+    if (!draggedElement) return;
+    
+    e.preventDefault();
+    e.target.classList.remove('sobre');
+    
+    const zonaGroup = e.target.getAttribute('data-group');
+    const itemGroup = draggedElement.getAttribute('data-group');
+    
+    if (zonaGroup !== itemGroup) return;
+
+    // Si la zona tiene data-correct (emparejar), solo permite 1 elemento
+    if (e.target.hasAttribute('data-correct')) {
+      // Remover cualquier elemento previo
+      const prevItem = e.target.querySelector('.drag-item');
+      if (prevItem) {
+        prevItem.remove();
+      }
+    }
+
+    // Mover el elemento arrastrado a la nueva zona
+    e.target.appendChild(draggedElement);
+    draggedElement = null;
+  });
+}
+
+// Crear sopa de letras
+function crearSopaDeLetras(palabras, tamaño) {
+  const grid = Array(tamaño).fill().map(() => Array(tamaño).fill(''));
+  const palabrasColocadas = new Map();
+  
+  // Direcciones: horizontal, vertical, diagonal derecha, diagonal izquierda
+  const direcciones = [
+    {dx: 0, dy: 1, nombre: 'horizontal'},
+    {dx: 1, dy: 0, nombre: 'vertical'},
+    {dx: 1, dy: 1, nombre: 'diagonal-der'},
+    {dx: 1, dy: -1, nombre: 'diagonal-izq'}
+  ];
+  
+  palabras.forEach(palabra => {
+    let colocada = false;
+    let intentos = 0;
+    
+    while (!colocada && intentos < 100) {
+      const dir = direcciones[Math.floor(Math.random() * direcciones.length)];
+      const maxFila = dir.dx === 0 ? tamaño : tamaño - palabra.length + 1;
+      const maxCol = dir.dy === -1 ? palabra.length - 1 : 
+                     dir.dy === 0 ? tamaño : tamaño - palabra.length + 1;
+      
+      const fila = Math.floor(Math.random() * maxFila);
+      const col = Math.floor(Math.random() * maxCol);
+      
+      // Verificar si cabe
+      let cabe = true;
+      const posiciones = [];
+      
+      for (let i = 0; i < palabra.length; i++) {
+        const f = fila + (dir.dx * i);
+        const c = col + (dir.dy * i);
+        posiciones.push({f, c});
+        
+        if (grid[f][c] !== '' && grid[f][c] !== palabra[i]) {
+          cabe = false;
+          break;
+        }
+      }
+      
+      if (cabe) {
+        posiciones.forEach((pos, i) => {
+          grid[pos.f][pos.c] = palabra[i];
+        });
+        palabrasColocadas.set(palabra, posiciones);
+        colocada = true;
+      }
+      
+      intentos++;
+    }
+  });
+  
+  // Rellenar espacios vacíos con letras aleatorias
+  for (let f = 0; f < tamaño; f++) {
+    for (let c = 0; c < tamaño; c++) {
+      if (grid[f][c] === '') {
+        grid[f][c] = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+      }
+    }
+  }
+  
+  return grid;
+}
+
+// Activar sopa de letras
+function activarSopaDeLetras() {
+  document.querySelectorAll('.sopa-grid').forEach(grid => {
+    const index = grid.getAttribute('data-index');
+    const celdas = grid.querySelectorAll('.sopa-cell');
+    
+    let seleccionando = false;
+    let celdasTemp = [];
+    let celdaInicio = null;
+    
+    celdas.forEach(celda => {
+      celda.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        seleccionando = true;
+        celdasTemp = [celda];
+        celdaInicio = celda;
+        celda.classList.add('selecting');
+      });
+      
+      celda.addEventListener('mouseenter', function() {
+        if (!seleccionando) return;
+        
+        const filaInicio = parseInt(celdaInicio.getAttribute('data-fila'));
+        const colInicio = parseInt(celdaInicio.getAttribute('data-col'));
+        const filaActual = parseInt(celda.getAttribute('data-fila'));
+        const colActual = parseInt(celda.getAttribute('data-col'));
+        
+        // Determinar dirección
+        const difFila = filaActual - filaInicio;
+        const difCol = colActual - colInicio;
+        
+        // Solo permitir direcciones válidas (horizontal, vertical, diagonal)
+        const esHorizontal = difFila === 0;
+        const esVertical = difCol === 0;
+        const esDiagonalDer = difFila === difCol;
+        const esDiagonalIzq = difFila === -difCol;
+        
+        if (esHorizontal || esVertical || esDiagonalDer || esDiagonalIzq) {
+          // Limpiar selección temporal
+          celdasTemp.forEach(c => c.classList.remove('selecting'));
+          celdasTemp = [];
+          
+          // Crear nueva selección en línea recta
+          const pasos = Math.max(Math.abs(difFila), Math.abs(difCol));
+          const deltaFila = difFila === 0 ? 0 : difFila / Math.abs(difFila);
+          const deltaCol = difCol === 0 ? 0 : difCol / Math.abs(difCol);
+          
+          for (let i = 0; i <= pasos; i++) {
+            const f = filaInicio + (deltaFila * i);
+            const c = colInicio + (deltaCol * i);
+            const celdaBuscada = grid.querySelector(`[data-fila='${f}'][data-col='${c}']`);
+            if (celdaBuscada) {
+              celdaBuscada.classList.add('selecting');
+              celdasTemp.push(celdaBuscada);
+            }
+          }
+        }
+      });
+    });
+    
+    document.addEventListener('mouseup', function() {
+      if (!seleccionando) return;
+      seleccionando = false;
+      
+      // Obtener palabra seleccionada
+      const palabraSeleccionada = celdasTemp.map(c => c.textContent).join('');
+      
+      // Verificar si es correcta
+      const pregunta = preguntas[index];
+      const palabrasBuscadas = pregunta.Respuestas.split(",").map(x => x.trim().toUpperCase());
+      
+      if (palabrasBuscadas.includes(palabraSeleccionada)) {
+        // Marcar como encontrada
+        celdasTemp.forEach(c => {
+          c.classList.remove('selecting');
+          c.classList.add('selected');
+        });
+        
+        // Actualizar badge
+        const badge = document.querySelector(`#palabrasEncontradas${index} [data-palabra='${palabraSeleccionada}']`);
+        if (badge) badge.classList.add('encontrada');
+      } else {
+        // Limpiar selección incorrecta
+        celdasTemp.forEach(c => c.classList.remove('selecting'));
+      }
+      
+      celdasTemp = [];
+      celdaInicio = null;
+    });
+  });
+}
+
+// Calificar
+function calificar() {
+  const nombre = document.getElementById("nombre").value.trim();
+  const grado = document.getElementById("grado").value.trim();
+  const seccion = document.getElementById("seccion").value.trim();
+
+  if (!nombre || !grado || !seccion) {
+    alert("Por favor completa todos los datos del alumno.");
+    return;
+  }
+
+  let correctas = 0;
+  let debugLines = [];
+
+  preguntas.forEach((p, i) => {
+    if (!p.Pregunta || !p.Correcta) {
+      debugLines.push(`P${i+1}: SALTADA (sin datos válidos)`);
+      return;
+    }
+
+    let esCorrecta = false;
+    let detalle = "";
+
+    switch (p.Tipo) {
+      case "opcion":
+      case "verdadero_falso": {
+        const sel = document.querySelector(`input[name='p${i}']:checked`);
+        const respuesta = sel ? sel.value.trim() : "(no respondida)";
+        detalle = `Respondió: "${respuesta}" | Correcta: "${p.Correcta}"`;
+        if (sel && sel.value.trim().toLowerCase() === String(p.Correcta).trim().toLowerCase()) {
+          correctas++;
+          esCorrecta = true;
+        }
+      }
+      break;
+
+      case "numerica": {
+        const valor = document.getElementById(`p${i}`).value.trim();
+        detalle = `Respondió: "${valor}" | Correcta: "${p.Correcta}"`;
+        if (valor === String(p.Correcta).trim()) {
+          correctas++;
+          esCorrecta = true;
+        }
+      }
+      break;
+
+      case "emparejar": {
+        const zonas = document.querySelectorAll(`.drop-zone[data-group='${i}'][data-correct]`);
+        let bien = 0;
+        let total = 0;
+        zonas.forEach(z => {
+          total++;
+          const item = z.querySelector('.drag-item');
+          if (item && item.getAttribute('data-value') === z.getAttribute('data-correct')) {
+            bien++;
+          }
+        });
+        detalle = `Emparejados bien: ${bien}/${total} (Cuenta como 1 pregunta)`;
+        if (bien === total && total > 0) {
+          correctas++;
+          esCorrecta = true;
+        }
+      }
+      break;
+
+      case "formar_oracion": {
+        const zona = document.getElementById(`zonaFormar${i}`);
+        const palabras = Array.from(zona.querySelectorAll('.drag-item')).map(e => e.textContent.trim());
+        const respuesta = palabras.join(" ");
+        detalle = `Formó: "${respuesta}" | Correcta: "${p.Correcta}"`;
+        if (respuesta.trim().toLowerCase() === String(p.Correcta).trim().toLowerCase()) {
+          correctas++;
+          esCorrecta = true;
+        }
+      }
+      break;
+
+      case "sopa_letras": {
+        const palabrasBuscadas = p.Respuestas.split(",").map(x => x.trim().toUpperCase());
+        const badges = document.querySelectorAll(`#palabrasEncontradas${i} .palabra-badge`);
+        let encontradas = 0;
+        
+        badges.forEach(badge => {
+          if (badge.classList.contains('encontrada')) {
+            encontradas++;
+          }
+        });
+        
+        detalle = `Palabras encontradas: ${encontradas}/${palabrasBuscadas.length}`;
+        if (encontradas === palabrasBuscadas.length) {
+          correctas++;
+          esCorrecta = true;
+        }
+      }
+      break;
+    }
+
+    debugLines.push(`P${i+1} (${p.Tipo}): ${esCorrecta ? '✓ CORRECTA' : '✗ INCORRECTA'} - ${detalle}`);
+  });
+
+  const totalPreguntasValidas = preguntas.filter(p => p.Pregunta && p.Correcta).length;
+  const puntosPorPregunta = 20 / totalPreguntasValidas;
+  const notaDecimal = correctas * puntosPorPregunta;
+  const nota = Math.round(notaDecimal);
+
+  const literal = nota >= 18 ? "AD" : nota >= 14 ? "A" : nota >= 11 ? "B" : "C";
+
+  // Mostrar debug info
+  const debugDiv = document.getElementById("debugInfo");
+  debugDiv.style.display = "block";
+  debugDiv.innerHTML = `
+    <strong>📊 INFORMACIÓN DE DEPURACIÓN:</strong><br><br>
+    <strong>Total de preguntas válidas:</strong> ${totalPreguntasValidas}<br>
+    <strong>Preguntas correctas:</strong> ${correctas}<br>
+    <strong>Puntos por pregunta:</strong> ${puntosPorPregunta.toFixed(2)}<br>
+    <strong>Nota decimal:</strong> ${notaDecimal.toFixed(2)}<br>
+    <strong>Nota final (redondeada):</strong> ${nota}<br><br>
+    <strong>Detalle por pregunta:</strong><br>
+    ${debugLines.join('<br>')}
+  `;
+
+  document.getElementById("resultado").innerHTML = `Tu nota es ${nota}/20 (${literal})`;
+
+  fetch(scriptURL, {
+    method: "POST",
+    body: JSON.stringify({ nombre, grado, seccion, nota, literal })
+  });
+}
+</script>
+
+<div id="finalTag">— Fin de la actividad —</div>
+
+</body>
+</html>
