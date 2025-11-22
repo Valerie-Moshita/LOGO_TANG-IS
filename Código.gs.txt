@@ -1,0 +1,37 @@
+function doGet(e) {
+  if (e.parameter.html) {
+    return HtmlService.createHtmlOutputFromFile('interfaz');
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const hoja = ss.getSheetByName("Preguntas");
+  const datos = hoja.getDataRange().getValues();
+  const encabezados = datos.shift();
+  const resultado = datos.map(fila => {
+    let obj = {};
+    encabezados.forEach((col, i) => obj[col] = fila[i]);
+    return obj;
+  });
+  return ContentService.createTextOutput(JSON.stringify(resultado))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const hoja = ss.getSheetByName("Respuestas");
+  const datos = JSON.parse(e.postData.contents);
+  hoja.appendRow([
+    datos.nombre,
+    datos.grado,
+    datos.seccion,
+    datos.actividad,
+    datos.nota,
+    datos.literal
+  ]);
+  return ContentService.createTextOutput("OK")
+    .setMimeType(ContentService.MimeType.TEXT);
+}
+
+
+
+interfaz.html
