@@ -1,0 +1,9 @@
+{
+  "name": "evaluacion-ia-api",
+  "version": "1.0.0",
+  "description": "Serverless function to evaluate student answers using AI",
+  "main": "evaluate.js",
+  "dependencies": {
+    "@google/generative-ai": "^0.14.1"
+  }
+}

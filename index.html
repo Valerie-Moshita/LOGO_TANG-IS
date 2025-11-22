@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>MIS ACTIVIDADES</title>
+  <style>
+    html {
+  zoom: 1.5;
+}
+    body {
+      font-family: "Comic Sans MS", Comic Sans MS, sans-serif;
+      background-color: #f0f7ff;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .header-container {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .logo {
+      max-width: 100%;
+      width: 800px;
+      height: auto;
+      margin-bottom: 10px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      text-align: center;
+      color: #0077cc;
+      margin: 10px 0;
+    }
+    .pregunta {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      margin: 20px auto;
+      padding: 15px;
+      max-width: 700px;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 15px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover { background-color: #0056b3; }
+
+    .drag-item {
+      display: inline-block;
+      background-color: #d8ecff;
+      border: 1px solid #007bff;
+      border-radius: 8px;
+      padding: 6px 10px;
+      margin: 5px;
+      cursor: grab;
+      user-select: none;
+    }
+
+    .drop-zone {
+      display: inline-block;
+      background-color: #f8f9fa;
+      border: 2px dashed #bbb;
+      border-radius: 8px;
+      min-width: 100px;
+      min-height: 30px;
+      padding: 8px;
+      margin: 5px;
+      vertical-align: top;
+      box-sizing: border-box;
+      min-height: 44px;
+    }
+
+    .zona-completa {
+      width: 100%;
+      box-sizing: border-box;
+      margin-left: 0;
+      margin-right: 0;
+    }
+
+    .sopa-container {
+      display: inline-block;
+      margin: 10px auto;
+      user-select: none;
+    }
+
+    .sopa-grid {
+      display: grid;
+      gap: 2px;
+      margin-bottom: 10px;
+    }
+
+    .sopa-cell {
+      width: 30px;
+      height: 30px;
+      border: 1px solid #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+      background-color: white;
+      transition: background-color 0.2s;
+    }
+
+    .sopa-cell.selected {
+      background-color: #90EE90 !important;
+      border-color: #32CD32;
+    }
+
+    .sopa-cell.selecting {
+      background-color: #FFEB3B;
+    }
+
+    .palabras-encontradas {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .palabra-badge {
+      padding: 5px 10px;
+      border-radius: 15px;
+      background-color: #e0e0e0;
+      font-size: 12px;
+    }
+
+    .palabra-badge.encontrada {
+      background-color: #90EE90;
+      text-decoration: line-through;
+    }
+
+    .sobre { outline: 3px dashed rgba(0,123,255,0.35); }
+
+    #resultado { text-align: center; font-size: 22px; font-weight: bold; margin-top: 25px; color: #0077cc; }
+    #finalTag { text-align: center; font-size: 14px; color: #555; margin-top: 40px; font-style: italic; }
+    #debugInfo { background: #ffe6e6; padding: 15px; margin: 20px auto; max-width: 700px; border-radius: 8px; font-family: monospace; }
+
+    /* Estilos para la Evaluación con IA */
+    .ia-eval-container {
+      margin-top: 15px;
+    }
+    .ia-textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      font-family: inherit;
+      font-size: 14px;
+    }
+    .ia-button {
+      background-color: #28a745;
+      margin-top: 10px;
+    }
+    .ia-button:hover {
+      background-color: #218838;
+    }
+    .ia-result {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+    }
+    .ia-result.correcto {
+      background-color: #d4edda;
+      border-color: #c3e6cb;
+      color: #155724;
+    }
+    .ia-result.incorrecto {
+      background-color: #f8d7da;
+      border-color: #f5c6cb;
+      color: #721c24;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header-container">
+  <img src="https://github.com/Valerie-Moshita/LOGO_TANG-IS/blob/main/logo.png?raw=true" alt="Logo Colegio Fermín Tangüis" class="logo" id="logoImg">
+  <h1 id="tituloEvaluacion">ACTIVIDADES</h1>
+</div>
+
+<div id="contenedorDatos" style="text-align:center; margin-bottom:15px;">
+  <input id="nombre" placeholder="Nombre del alumno" style="padding:6px; border-radius:6px; width:250px;">
+  <input id="grado" placeholder="Grado" style="padding:6px; border-radius:6px; width:80px;">
+  <input id="seccion" placeholder="Sección" style="padding:6px; border-radius:6px; width:80px;">
+</div>
+
+<div id="contenedorPreguntas">Cargando preguntas...</div>
+
+<br>
+<div style="text-align:center;">
+  <button onclick="calificar()">Calificar Actividades</button>
+</div>
+
+<div id="debugInfo" style="display:none;"></div>
+<p id="resultado"></p>
+
+<script>
+// URL del Google Sheet publicado como CSV
+const csvURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSaN_VzM1TVypabkDvbGNuF6TBdwdKy7PIKHR3g0VgT1TCMiQXm59brQhDQ3Vesemn7LdFmZEpWKzCP/pub?output=csv';
+// URL para enviar las notas (opcional, si se mantiene la funcionalidad)
+const scriptURL = 'https://script.google.com/macros/s/AKfycbx9BAVK1OBGoUuBQb7OcwEl6CNF81evbCSMRznwLoa8VPEw1Jp1xHz4_iAZBbIdpOQmaw/exec';
+// URL del "puente" para la evaluación con IA.
+const apiURL = '/api/evaluate';
+
+let preguntas = [];
+let itemCounter = 0;
+let draggedElement = null;
+let respuestasConfirmadas = new Set(); // Para rastrear preguntas ya respondidas
+
+// Función robusta para parsear texto CSV a un array de objetos.
+// Maneja campos entre comillas, saltos de línea y comas dentro de los campos, y comillas escapadas ("").
+function parseCSV(text) {
+    const rows = [];
+    let currentRow = [];
+    let currentField = '';
+    let inQuotedField = false;
+
+    // Normalizar saltos de línea a \n
+    text = text.replace(/\r\n/g, '\n');
+
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const nextChar = text[i + 1];
+
+        if (inQuotedField) {
+            if (char === '"' && nextChar === '"') {
+                currentField += '"';
+                i++; // Saltar la segunda comilla
+            } else if (char === '"') {
+                inQuotedField = false;
+            } else {
+                currentField += char;
+            }
+        } else {
+            if (char === '"') {
+                inQuotedField = true;
+            } else if (char === ',') {
+                currentRow.push(currentField);
+                currentField = '';
+            } else if (char === '\n') {
+                currentRow.push(currentField);
+                rows.push(currentRow);
+                currentRow = [];
+                currentField = '';
+            } else {
+                currentField += char;
+            }
+        }
+    }
+    // Añadir el último campo y la última fila si el archivo no termina con \n
+    if (currentField || currentRow.length > 0) {
+        currentRow.push(currentField);
+        rows.push(currentRow);
+    }
+
+    if (rows.length < 2) return [];
+
+    const headers = rows.shift();
+    // Sanear los encabezados (quitar BOM y espacios)
+    const sanitizedHeaders = headers.map((h, i) => i === 0 ? h.trim().replace(/^\uFEFF/, '') : h.trim());
+
+    return rows.map(row => {
+        const obj = {};
+        sanitizedHeaders.forEach((header, index) => {
+            obj[header] = row[index] || '';
+        });
+        return obj;
+    }).filter(obj => obj.Pregunta); // Filtrar filas vacías que no tengan pregunta
+}
+
+
+fetch(csvURL + "&nocache=" + new Date().getTime())
+  .then(res => {
+      if (!res.ok) {
+          throw new Error(`Error al cargar el CSV: ${res.statusText}`);
+      }
+      return res.text();
+  })
+  .then(csvText => {
+    preguntas = parseCSV(csvText);
+
+    if (preguntas.length > 0 && preguntas[0].ENCABEZADO) {
+      document.getElementById("tituloEvaluacion").textContent = preguntas[0].ENCABEZADO;
+    }
+
+    mostrarPreguntas();
+  })
+  .catch(e => {
+    document.getElementById("contenedorPreguntas").innerHTML =
+      "<p style='color:red;'>Error al cargar las preguntas desde Google Sheets.<br>Verifica que el enlace CSV sea correcto y esté publicado.</p>";
+    console.error(e);
+  });
+
+function crearDragItemHTML(texto, grupo) {
+  const id = 'item_' + (itemCounter++);
+  return `<div class='drag-item' draggable='true' data-group='${grupo}' data-value='${texto}' data-id='${id}'>${texto}</div>`;
+}
+
+function mostrarPreguntas() {
+  const cont = document.getElementById("contenedorPreguntas");
+  cont.innerHTML = "";
+  preguntas.forEach((p, i) => {
+    let html = `<div class='pregunta'><b>${i + 1})</b>&nbsp;&nbsp;${p.Pregunta}<br>`;
+    switch (p.Tipo) {
+      case "opcion":
+        html += p.Respuestas.split(",").map(r =>
+          `<label><input type='radio' name='p${i}' value='${r.trim()}' onchange='bloquearRespuesta(${i}, "opcion")'> ${r.trim()}</label><br>`
+        ).join("");
+        break;
+
+      case "verdadero_falso":
+        html += `
+          <label><input type='radio' name='p${i}' value='Verdadero' onchange='bloquearRespuesta(${i}, "verdadero_falso")'> Verdadero</label><br>
+          <label><input type='radio' name='p${i}' value='Falso' onchange='bloquearRespuesta(${i}, "verdadero_falso")'> Falso</label>
+        `;
+        break;
+
+      case "numerica":
+        html += `<input type='number' id='p${i}' onchange='bloquearRespuesta(${i}, "numerica")' style='width:80px;'>`;
+        break;
+
+      case "critico_valorativa": // Ajustado para coincidir con el tipo en el CSV
+        html += `
+          <div class="ia-eval-container">
+            <textarea id="respuestaIA_${i}" class="ia-textarea" placeholder="Escribe tu respuesta aquí..."></textarea>
+            <button id="btnIA_${i}" class="ia-button" onclick="evaluarConIA(${i})">Evaluar con IA</button>
+            <div id="resultadoIA_${i}" class="ia-result" style="display:none;"></div>
+          </div>
+        `;
+        break;
+
+      case "emparejar": {
+        const pares = p.Respuestas.split(",").map(x => x.trim().split(":"));
+        const paresDesordenados = [...pares].sort(() => Math.random() - 0.5);
+        html += `<div id='zonaBase${i}' class='zona-completa drop-zone' data-group='${i}' style='border:2px solid #ccc; border-radius:10px; padding:5px; display:flex; flex-wrap:wrap; gap:5px;'>`;
+        html += paresDesordenados.map(pair => crearDragItemHTML(pair[0], i)).join("");
+        html += `</div>`;
+        html += `<div class='zona-completa' style='display:flex; flex-wrap:wrap; justify-content:center;'>`;
+        pares.forEach(pair => {
+          html += `<div class='drop-zone' data-correct='${pair[0]}' data-group='${i}' style='min-width:120px; margin:5px;'><b>${pair[1]}</b></div>`;
+        });
+        html += `</div>`;
+      }
+      break;
+
+      case "formar_oracion": {
+        const palabras = p.Respuestas.split(",").map(x => x.trim()).sort(() => Math.random() - 0.5);
+        html += `<div id='zonaFormar${i}' class='drop-zone zona-completa' data-group='${i}' style='min-height:40px; border:2px dashed #bbb; margin-bottom:10px; padding:8px;'></div>`;
+        html += `<div id='zonaPalabras${i}' class='zona-completa drop-zone' data-group='${i}' style='border:2px solid #ccc; padding:5px; display:flex; flex-wrap:wrap; gap:5px;'>${palabras.map(w => crearDragItemHTML(w, i)).join("")}</div>`;
+      }
+      break;
+
+      case "sopa_letras": {
+        const palabras = p.Respuestas.split(",").map(x => x.trim().toUpperCase());
+        const tamaño = 12;
+        const grid = crearSopaDeLetras(palabras, tamaño);
+        html += `<div class='sopa-container' style='text-align:center;'><div class='sopa-grid' id='sopaGrid${i}' style='grid-template-columns: repeat(${tamaño}, 30px);' data-index='${i}'>`;
+        html += grid.map((fila, f) => fila.map((letra, c) => `<div class='sopa-cell' data-fila='${f}' data-col='${c}'>${letra}</div>`).join('')).join('');
+        html += `</div><div class='palabras-encontradas' id='palabrasEncontradas${i}'>${palabras.map(p => `<span class='palabra-badge' data-palabra='${p}'>${p}</span>`).join('')}</div></div>`;
+      }
+      break;
+
+      default:
+        html += `<i>Tipo no reconocido.</i>`;
+    }
+
+    html += "</div>";
+    cont.innerHTML += html;
+  });
+
+  activarDragDrop();
+  activarSopaDeLetras();
+}
+
+async function evaluarConIA(index) {
+  const pregunta = preguntas[index].Pregunta;
+  const respuestaTextarea = document.getElementById(`respuestaIA_${index}`);
+  const respuesta = respuestaTextarea.value.trim();
+  const boton = document.getElementById(`btnIA_${index}`);
+  const resultadoDiv = document.getElementById(`resultadoIA_${index}`);
+
+  if (respuesta.length < 10) {
+    alert("Por favor, escribe una respuesta más completa.");
+    return;
+  }
+
+  boton.disabled = true;
+  boton.textContent = "Evaluando...";
+  resultadoDiv.style.display = "none";
+
+  try {
+    const response = await fetch(apiURL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pregunta, respuesta }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `Error del servidor: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    resultadoDiv.style.display = "block";
+    resultadoDiv.innerHTML = `<strong>Resultado:</strong> ${data.evaluacion}<br><strong>Feedback:</strong> ${data.feedback}`;
+
+    if (data.evaluacion.toLowerCase() === 'correcto') {
+      resultadoDiv.className = 'ia-result correcto';
+    } else {
+      resultadoDiv.className = 'ia-result incorrecto';
+    }
+
+    respuestaTextarea.disabled = true;
+
+  } catch (error) {
+    console.error("Error al evaluar con IA:", error);
+    resultadoDiv.style.display = "block";
+    resultadoDiv.className = 'ia-result incorrecto';
+    resultadoDiv.innerHTML = `<strong>Error:</strong> ${error.message || "No se pudo contactar a la IA. Inténtalo de nuevo."}`;
+    boton.disabled = false;
+    boton.textContent = "Evaluar con IA";
+  }
+}
+
+function bloquearRespuesta(indice, tipo) {
+  if (respuestasConfirmadas.has(indice)) return;
+  setTimeout(() => {
+    respuestasConfirmadas.add(indice);
+    switch(tipo) {
+      case "opcion": case "verdadero_falso":
+        document.querySelectorAll(`input[name='p${indice}']`).forEach(radio => {
+          radio.disabled = true;
+          if (radio.checked) {
+            radio.parentElement.style.fontWeight = 'bold';
+            radio.parentElement.style.color = '#0077cc';
+          }
+        });
+        break;
+      case "numerica":
+        const input = document.getElementById(`p${indice}`);
+        if (input && input.value.trim() !== '') {
+          input.disabled = true;
+          input.style.backgroundColor = '#e9ecef';
+          input.style.fontWeight = 'bold';
+          input.style.color = '#0077cc';
+        }
+        break;
+    }
+  }, 100);
+}
+
+function activarDragDrop() {
+  document.addEventListener('dragstart', e => { if (e.target.classList.contains('drag-item')) { draggedElement = e.target; e.dataTransfer.effectAllowed = 'move'; e.target.style.opacity = '0.5'; } });
+  document.addEventListener('dragend', e => { if (e.target.classList.contains('drag-item')) { e.target.style.opacity = '1'; } });
+  document.addEventListener('dragover', e => { if (e.target.classList.contains('drop-zone') && draggedElement && e.target.getAttribute('data-group') === draggedElement.getAttribute('data-group')) { e.preventDefault(); e.target.classList.add('sobre'); } });
+  document.addEventListener('dragleave', e => { if (e.target.classList.contains('drop-zone')) { e.target.classList.remove('sobre'); } });
+  document.addEventListener('drop', e => { if (e.target.classList.contains('drop-zone') && draggedElement && e.target.getAttribute('data-group') === draggedElement.getAttribute('data-group')) { e.preventDefault(); e.target.classList.remove('sobre'); if (e.target.hasAttribute('data-correct') && e.target.querySelector('.drag-item')) { e.target.querySelector('.drag-item').remove(); } e.target.appendChild(draggedElement); draggedElement = null; } });
+}
+
+function crearSopaDeLetras(palabras, tamaño) {
+  const grid = Array(tamaño).fill().map(() => Array(tamaño).fill(''));
+  const direcciones = [{dx: 0, dy: 1}, {dx: 1, dy: 0}, {dx: 1, dy: 1}, {dx: 1, dy: -1}];
+  palabras.forEach(palabra => {
+    let colocada = false, intentos = 0;
+    while (!colocada && intentos < 100) {
+      const dir = direcciones[Math.floor(Math.random() * direcciones.length)];
+      const maxFila = dir.dx === 0 ? tamaño : tamaño - palabra.length + 1;
+      const maxCol = dir.dy === -1 ? palabra.length - 1 : (dir.dy === 0 ? tamaño : tamaño - palabra.length + 1);
+      const fila = Math.floor(Math.random() * maxFila);
+      const col = Math.floor(Math.random() * maxCol);
+      let cabe = true, posiciones = [];
+      for (let i = 0; i < palabra.length; i++) {
+        const f = fila + (dir.dx * i), c = col + (dir.dy * i);
+        posiciones.push({f, c});
+        if (grid[f][c] !== '' && grid[f][c] !== palabra[i]) { cabe = false; break; }
+      }
+      if (cabe) {
+        posiciones.forEach((pos, i) => grid[pos.f][pos.c] = palabra[i]);
+        colocada = true;
+      }
+      intentos++;
+    }
+  });
+  for (let f = 0; f < tamaño; f++) { for (let c = 0; c < tamaño; c++) { if (grid[f][c] === '') grid[f][c] = String.fromCharCode(65 + Math.floor(Math.random() * 26)); } }
+  return grid;
+}
+
+function activarSopaDeLetras() {
+  document.querySelectorAll('.sopa-grid').forEach(grid => {
+    let seleccionando = false, celdasTemp = [], celdaInicio = null;
+    grid.querySelectorAll('.sopa-cell').forEach(celda => {
+      celda.addEventListener('mousedown', e => { e.preventDefault(); seleccionando = true; celdasTemp = [celda]; celdaInicio = celda; celda.classList.add('selecting'); });
+      celda.addEventListener('mouseenter', () => {
+        if (!seleccionando) return;
+        const fI = parseInt(celdaInicio.getAttribute('data-fila')), cI = parseInt(celdaInicio.getAttribute('data-col'));
+        const fA = parseInt(celda.getAttribute('data-fila')), cA = parseInt(celda.getAttribute('data-col'));
+        const dF = fA - fI, dC = cA - cI;
+        if (dF === 0 || dC === 0 || Math.abs(dF) === Math.abs(dC)) {
+          celdasTemp.forEach(c => c.classList.remove('selecting')); celdasTemp = [];
+          const pasos = Math.max(Math.abs(dF), Math.abs(dC));
+          const deltaF = dF === 0 ? 0 : dF / Math.abs(dF), deltaC = dC === 0 ? 0 : dC / Math.abs(dC);
+          for (let i = 0; i <= pasos; i++) {
+            const celdaBuscada = grid.querySelector(`[data-fila='${fI + (deltaF * i)}'][data-col='${cI + (deltaC * i)}']`);
+            if (celdaBuscada) { celdaBuscada.classList.add('selecting'); celdasTemp.push(celdaBuscada); }
+          }
+        }
+      });
+    });
+    document.addEventListener('mouseup', () => {
+      if (!seleccionando) return; seleccionando = false;
+      const palabra = celdasTemp.map(c => c.textContent).join('');
+      const palabrasBuscadas = preguntas[grid.getAttribute('data-index')].Respuestas.split(",").map(x => x.trim().toUpperCase());
+      if (palabrasBuscadas.includes(palabra)) {
+        celdasTemp.forEach(c => { c.classList.remove('selecting'); c.classList.add('selected'); });
+        const badge = document.querySelector(`#palabrasEncontradas${grid.getAttribute('data-index')} [data-palabra='${palabra}']`);
+        if (badge) badge.classList.add('encontrada');
+      } else { celdasTemp.forEach(c => c.classList.remove('selecting')); }
+      celdasTemp = []; celdaInicio = null;
+    });
+  });
+}
+
+function calificar() {
+  const nombre = document.getElementById("nombre").value.trim();
+  const grado = document.getElementById("grado").value.trim();
+  const seccion = document.getElementById("seccion").value.trim();
+
+  if (!nombre || !grado || !seccion) {
+    alert("Por favor completa todos los datos del alumno.");
+    return;
+  }
+
+  let correctas = 0;
+  let debugLines = [];
+
+  // Filtramos solo las preguntas que son calificables por este método.
+  const preguntasCalificables = preguntas.filter(p => p.Tipo !== 'critico_valorativa');
+
+  preguntasCalificables.forEach((p, i) => {
+    // Buscamos el índice original para referenciar los elementos correctos del DOM
+    const originalIndex = preguntas.findIndex(origP => origP === p);
+
+    if (!p.Pregunta || !p.Correcta) {
+      debugLines.push(`P${originalIndex + 1}: SALTADA (sin datos válidos)`);
+      return;
+    }
+
+    let esCorrecta = false;
+    let detalle = "";
+
+    switch (p.Tipo) {
+      case "opcion": case "verdadero_falso":
+        const sel = document.querySelector(`input[name='p${originalIndex}']:checked`);
+        const resp = sel ? sel.value.trim() : "(no respondida)";
+        detalle = `Respondió: "${resp}" | Correcta: "${p.Correcta}"`;
+        if (sel && resp.toLowerCase() === String(p.Correcta).trim().toLowerCase()) { correctas++; esCorrecta = true; }
+        break;
+      case "numerica":
+        const val = document.getElementById(`p${originalIndex}`).value.trim();
+        detalle = `Respondió: "${val}" | Correcta: "${p.Correcta}"`;
+        if (val === String(p.Correcta).trim()) { correctas++; esCorrecta = true; }
+        break;
+      case "emparejar":
+        const zonas = document.querySelectorAll(`.drop-zone[data-group='${originalIndex}'][data-correct]`);
+        let bien = 0, total = 0;
+        zonas.forEach(z => { total++; if (z.querySelector('.drag-item')?.getAttribute('data-value') === z.getAttribute('data-correct')) bien++; });
+        detalle = `Emparejados: ${bien}/${total}`;
+        if (bien === total && total > 0) { correctas++; esCorrecta = true; }
+        break;
+      case "formar_oracion":
+        const respOracion = Array.from(document.querySelectorAll(`#zonaFormar${originalIndex} .drag-item`)).map(e => e.textContent.trim()).join(" ");
+        detalle = `Formó: "${respOracion}" | Correcta: "${p.Correcta}"`;
+        if (respOracion.toLowerCase() === String(p.Correcta).trim().toLowerCase()) { correctas++; esCorrecta = true; }
+        break;
+      case "sopa_letras":
+        const badges = document.querySelectorAll(`#palabrasEncontradas${originalIndex} .palabra-badge.encontrada`);
+        const totalPalabras = p.Respuestas.split(",").length;
+        detalle = `Encontradas: ${badges.length}/${totalPalabras}`;
+        if (badges.length === totalPalabras) { correctas++; esCorrecta = true; }
+        break;
+    }
+    debugLines.push(`P${originalIndex + 1} (${p.Tipo}): ${esCorrecta ? '✓' : '✗'} - ${detalle}`);
+  });
+
+  const totalPreguntasValidas = preguntasCalificables.filter(p => p.Pregunta && p.Correcta).length;
+  if (totalPreguntasValidas > 0) {
+    const puntosPorPregunta = 20 / totalPreguntasValidas;
+    const notaDecimal = correctas * puntosPorPregunta;
+    const nota = Math.round(notaDecimal);
+    const literal = nota >= 18 ? "AD" : nota >= 14 ? "A" : nota >= 11 ? "B" : "C";
+
+    const debugDiv = document.getElementById("debugInfo");
+    debugDiv.style.display = "block";
+    debugDiv.innerHTML = `<strong>📊 DEBUG CALIFICACIÓN:</strong><br><br><strong>Preguntas calificables:</strong> ${totalPreguntasValidas}<br><strong>Correctas:</strong> ${correctas}<br><strong>Nota final:</strong> ${nota}<br><br>${debugLines.join('<br>')}`;
+    document.getElementById("resultado").innerHTML = `Tu nota de las actividades es ${nota}/20 (${literal})`;
+    fetch(scriptURL, { method: "POST", body: JSON.stringify({ nombre, grado, seccion, nota, literal }) });
+  } else {
+    document.getElementById("resultado").innerHTML = "No hay actividades para calificar automáticamente.";
+  }
+}
+</script>
+
+<div id="finalTag">— Fin de la actividad —</div>
+
+</body>
+</html>
