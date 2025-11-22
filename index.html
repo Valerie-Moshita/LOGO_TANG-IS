@@ -207,8 +207,8 @@
 <p id="resultado"></p>
 
 <script>
-// URL del Google Sheet publicado como CSV
-const csvURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSaN_VzM1TVypabkDvbGNuF6TBdwdKy7PIKHR3g0VgT1TCMiQXm59brQhDQ3Vesemn7LdFmZEpWKzCP/pub?output=csv';
+// URL del endpoint local que sirve las preguntas
+const questionsURL = '/api/get-questions';
 // URL para enviar las notas (opcional, si se mantiene la funcionalidad)
 const scriptURL = 'https://script.google.com/macros/s/AKfycbx9BAVK1OBGoUuBQb7OcwEl6CNF81evbCSMRznwLoa8VPEw1Jp1xHz4_iAZBbIdpOQmaw/exec';
 // URL del "puente" para la evaluación con IA.
@@ -281,10 +281,10 @@ function parseCSV(text) {
 }
 
 
-fetch(csvURL + "&nocache=" + new Date().getTime())
+fetch(questionsURL + "?nocache=" + new Date().getTime())
   .then(res => {
       if (!res.ok) {
-          throw new Error(`Error al cargar el CSV: ${res.statusText}`);
+          throw new Error(`Error al cargar las preguntas desde el servidor (código: ${res.status})`);
       }
       return res.text();
   })
@@ -299,8 +299,8 @@ fetch(csvURL + "&nocache=" + new Date().getTime())
   })
   .catch(e => {
     document.getElementById("contenedorPreguntas").innerHTML =
-      "<p style='color:red;'>Error al cargar las preguntas desde Google Sheets.<br>Verifica que el enlace CSV sea correcto y esté publicado.</p>";
-    console.error(e);
+      "<p style='color:red;'>No se pudieron cargar las preguntas.<br>Por favor, recarga la página e inténtalo de nuevo.</p>";
+    console.error("Error detallado al cargar preguntas:", e);
   });
 
 function crearDragItemHTML(texto, grupo) {
