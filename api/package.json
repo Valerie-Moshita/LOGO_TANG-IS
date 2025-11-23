@@ -1,0 +1,10 @@
+{
+  "name": "evaluacion-ia-api",
+  "version": "1.0.0",
+  "description": "Serverless functions for the quiz application",
+  "main": "evaluate.js",
+  "dependencies": {
+    "@google/generative-ai": "^0.14.1",
+    "node-fetch": "^2.0.0"
+  }
+}
