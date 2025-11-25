@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rompecabezas Educativo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #2c3e50;
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: hidden;
+            touch-action: none; /* Mejor control en móviles */
+        }
+
+        /* Indicador de carga */
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            text-align: center;
+        }
+
+        canvas {
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            margin-top: 20px;
+            background-color: #34495e;
+            cursor: grab;
+        }
+
+        canvas:active {
+            cursor: grabbing;
+        }
+
+        #message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(46, 204, 113, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            font-size: 2rem;
+            display: none;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 100;
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% { transform: translate(-50%, -50%) scale(0); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .error-msg {
+            color: #e74c3c;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading">
+        Cargando rompecabezas...<br>
+        <small style="font-size: 0.8rem; opacity: 0.7;">Si la imagen no carga, verifica el enlace.</small>
+    </div>
+    
+    <canvas id="puzzleCanvas"></canvas>
+    <div id="message">✨ ¡Excelente Trabajo! ✨<br><span style="font-size:1rem">Rompecabezas completado</span></div>
+
+<script>
+    const canvas = document.getElementById('puzzleCanvas');
+    const ctx = canvas.getContext('2d');
+    const message = document.getElementById('message');
+    const loading = document.getElementById('loading');
+
+    // --- CONFIGURACIÓN DESDE URL ---
+    const urlParams = new URLSearchParams(window.location.search);
+    // Ejemplo de URL: puzzle.html?img=URL_IMAGEN&pieces=20
+    
+    const imgSrc = urlParams.get('img'); 
+    // Por defecto 10 piezas si no se especifica
+    let targetPieces = parseInt(urlParams.get('pieces')) || 10; 
+
+    if (!imgSrc) {
+        loading.innerHTML = '<div class="error-msg">❌ Error: No se ha especificado una imagen en el enlace.</div>';
+        throw new Error("No image source");
+    }
+
+    let pieces = [];
+    let puzzleWidth, puzzleHeight;
+    let pieceWidth, pieceHeight;
+    let img;
+    let ROWS, COLS;
+    const SNAP_DISTANCE = 30;
+
+    let selectedPiece = null;
+    let offsetX, offsetY;
+
+    // Cargar imagen
+    img = new Image();
+    // CRUCIAL: Permitir carga de imágenes externas (GitHub/CORS)
+    img.crossOrigin = "Anonymous"; 
+    
+    img.onload = function() {
+        loading.style.display = 'none';
+        initGame();
+    };
+    
+    img.onerror = function() {
+        loading.innerHTML = '<div class="error-msg">❌ Error al cargar la imagen.<br>Asegúrate de que el link sea directo (terminado en .jpg/.png)<br>y permita acceso externo (CORS).</div>';
+    };
+
+    // Si viene de GitHub blob, intentar convertir a raw automáticamente
+    if (imgSrc.includes('github.com') && imgSrc.includes('/blob/')) {
+        img.src = imgSrc.replace('/blob/', '/raw/');
+    } else {
+        img.src = imgSrc;
+    }
+
+    function initGame() {
+        // 1. Calcular filas y columnas dinámicamente según el número de piezas deseado
+        // y el aspect ratio de la imagen para que las piezas sean cuadradas.
+        const imgRatio = img.width / img.height;
+        
+        // Fórmula matemática para aproximar filas/cols manteniendo ratio
+        ROWS = Math.round(Math.sqrt(targetPieces / imgRatio));
+        COLS = Math.round(ROWS * imgRatio);
+        
+        // Asegurar mínimos
+        if (ROWS < 1) ROWS = 1;
+        if (COLS < 1) COLS = 1;
+        
+        // Ajustar tamaño del canvas a la ventana
+        const maxWidth = window.innerWidth * 0.95;
+        const maxHeight = window.innerHeight * 0.95;
+        
+        let displayRatio = Math.min(maxWidth / img.width, maxHeight / img.height);
+        
+        puzzleWidth = img.width * displayRatio;
+        puzzleHeight = img.height * displayRatio;
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        pieceWidth = puzzleWidth / COLS;
+        pieceHeight = puzzleHeight / ROWS;
+
+        createPieces();
+        scramblePieces();
+        draw();
+    }
+
+    function createPieces() {
+        pieces = [];
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                let piece = {
+                    r: r,
+                    c: c,
+                    correctX: (canvas.width - puzzleWidth) / 2 + c * pieceWidth,
+                    correctY: (canvas.height - puzzleHeight) / 2 + r * pieceHeight,
+                    x: 0, 
+                    y: 0,
+                    width: pieceWidth,
+                    height: pieceHeight,
+                    // Forma de pestañas aleatoria
+                    top: r === 0 ? 0 : -pieces[(r-1)*COLS + c].bottom,
+                    right: c === COLS - 1 ? 0 : Math.random() > 0.5 ? 1 : -1,
+                    bottom: r === ROWS - 1 ? 0 : Math.random() > 0.5 ? 1 : -1,
+                    left: c === 0 ? 0 : -pieces[pieces.length - 1].right,
+                    isLocked: false
+                };
+                pieces.push(piece);
+            }
+        }
+    }
+
+    function scramblePieces() {
+        pieces.forEach(p => {
+            p.x = Math.random() * (canvas.width - p.width);
+            p.y = Math.random() * (canvas.height - p.height);
+        });
+    }
+
+    function drawPiecePath(ctx, p, x, y) {
+        const w = p.width;
+        const h = p.height;
+        const tabSize = Math.min(w, h) * 0.22; 
+
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        // TOP
+        if (p.top !== 0) {
+            ctx.lineTo(x + w * 0.35, y);
+            ctx.bezierCurveTo(x + w * 0.35, y - tabSize * p.top, x + w * 0.65, y - tabSize * p.top, x + w * 0.65, y);
+        }
+        ctx.lineTo(x + w, y);
+        // RIGHT
+        if (p.right !== 0) {
+            ctx.lineTo(x + w, y + h * 0.35);
+            ctx.bezierCurveTo(x + w + tabSize * p.right, y + h * 0.35, x + w + tabSize * p.right, y + h * 0.65, x + w, y + h * 0.65);
+        }
+        ctx.lineTo(x + w, y + h);
+        // BOTTOM
+        if (p.bottom !== 0) {
+            ctx.lineTo(x + w * 0.65, y + h);
+            ctx.bezierCurveTo(x + w * 0.65, y + h + tabSize * p.bottom, x + w * 0.35, y + h + tabSize * p.bottom, x + w * 0.35, y + h);
+        }
+        ctx.lineTo(x, y + h);
+        // LEFT
+        if (p.left !== 0) {
+            ctx.lineTo(x, y + h * 0.65);
+            ctx.bezierCurveTo(x - tabSize * p.left, y + h * 0.65, x - tabSize * p.left, y + h * 0.35, x, y + h * 0.35);
+        }
+        ctx.lineTo(x, y);
+        ctx.closePath();
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Guía visual semi-transparente del fondo (opcional, ayuda a niños)
+        ctx.save();
+        ctx.globalAlpha = 0.1;
+        ctx.drawImage(img, (canvas.width - puzzleWidth)/2, (canvas.height - puzzleHeight)/2, puzzleWidth, puzzleHeight);
+        ctx.restore();
+
+        // Dibujar piezas
+        [...pieces].sort((a, b) => (a === selectedPiece ? 1 : -1)).forEach(p => {
+            ctx.save();
+            drawPiecePath(ctx, p, p.x, p.y);
+            ctx.clip();
+
+            const srcX = p.c * (img.width / COLS);
+            const srcY = p.r * (img.height / ROWS);
+            const srcW = img.width / COLS;
+            const srcH = img.height / ROWS;
+            const tabScale = 0.22; 
+            
+            ctx.drawImage(
+                img, 
+                srcX - (srcW * tabScale), srcY - (srcH * tabScale), 
+                srcW * (1 + 2*tabScale), srcH * (1 + 2*tabScale),
+                p.x - (p.width * tabScale), p.y - (p.height * tabScale),
+                p.width * (1 + 2*tabScale), p.height * (1 + 2*tabScale)
+            );
+            
+            ctx.restore();
+            ctx.save();
+            drawPiecePath(ctx, p, p.x, p.y);
+            
+            if(p.isLocked) {
+                ctx.strokeStyle = "#27ae60"; 
+                ctx.lineWidth = 1;
+            } else {
+                ctx.strokeStyle = "rgba(255,255,255,0.8)";
+                ctx.lineWidth = 2;
+                ctx.shadowColor = "black";
+                ctx.shadowBlur = 5;
+            }
+            ctx.stroke();
+            ctx.restore();
+        });
+    }
+
+    // --- MANEJO DE MOUSE Y TACTIL (Móviles) ---
+    canvas.addEventListener('mousedown', onStart);
+    canvas.addEventListener('touchstart', onStart, {passive: false});
+    
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('touchmove', onMove, {passive: false});
+    
+    window.addEventListener('mouseup', onEnd);
+    window.addEventListener('touchend', onEnd);
+
+    function getPos(e) {
+        if(e.touches) {
+            return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+        return { x: e.clientX, y: e.clientY };
+    }
+
+    function onStart(e) {
+        // e.preventDefault(); // Evitar scroll en touch
+        const pos = getPos(e);
+        const mx = pos.x;
+        const my = pos.y;
+
+        for (let i = pieces.length - 1; i >= 0; i--) {
+            const p = pieces[i];
+            if (!p.isLocked && mx > p.x && mx < p.x + p.width && my > p.y && my < p.y + p.height) {
+                selectedPiece = p;
+                offsetX = mx - p.x;
+                offsetY = my - p.y;
+                // Mover al final del array para dibujar encima
+                pieces.splice(i, 1);
+                pieces.push(p);
+                draw();
+                return;
+            }
+        }
+    }
+
+    function onMove(e) {
+        if (selectedPiece) {
+            e.preventDefault(); 
+            const pos = getPos(e);
+            selectedPiece.x = pos.x - offsetX;
+            selectedPiece.y = pos.y - offsetY;
+            draw();
+        }
+    }
+
+    function onEnd() {
+        if (selectedPiece) {
+            if (Math.abs(selectedPiece.x - selectedPiece.correctX) < SNAP_DISTANCE &&
+                Math.abs(selectedPiece.y - selectedPiece.correctY) < SNAP_DISTANCE) {
+                
+                selectedPiece.x = selectedPiece.correctX;
+                selectedPiece.y = selectedPiece.correctY;
+                selectedPiece.isLocked = true;
+                
+                // Efecto "pop" pequeño
+                draw();
+            }
+            selectedPiece = null;
+            checkWin();
+        }
+    }
+
+    function checkWin() {
+        if (pieces.every(p => p.isLocked)) {
+            message.style.display = 'block';
+            confettiEffect(); // Función placeholder por si quieres añadir confeti
+        }
+    }
+    
+    function confettiEffect() {
+        // Aquí podrías agregar una librería de confeti si lo deseas
+        console.log("¡Confeti!"); 
+    }
+
+</script>
+</body>
+</html>
